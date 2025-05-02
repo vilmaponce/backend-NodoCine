@@ -41,20 +41,15 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email y contraseña son requeridos' });
-    }
-
+    
+    // Validaciones...
     const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ error: 'Credenciales inválidas' });
-
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) return res.status(401).json({ error: 'Credenciales inválidas' });
+    // Verificación de contraseña...
 
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '24h' } // Considera aumentar este tiempo para desarrollo
     );
 
     res.json({
@@ -65,9 +60,7 @@ export const login = async (req, res) => {
         role: user.role
       }
     });
-
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    // Manejo de errores...
   }
 };

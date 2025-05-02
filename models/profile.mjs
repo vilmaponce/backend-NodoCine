@@ -10,7 +10,13 @@ const profileSchema = new mongoose.Schema({
   },
   imageUrl: {
     type: String,
-    required: true,
+    default: '/images/profiles/default-profile.png', // Ruta relativa por defecto
+    set: function(imageUrl) {
+      // Si no se proporciona imagen o está vacía, usar la predeterminada
+      return !imageUrl || imageUrl.trim() === '' ? 
+        '/images/profiles/default-profile.png' : 
+        imageUrl;
+    }
   },
   isChild: {
     type: Boolean,
@@ -34,9 +40,13 @@ const profileSchema = new mongoose.Schema({
   versionKey: false
 });
 
-// Middleware para logging
+// Middleware para asegurar URL de imagen válida
 profileSchema.post('find', function(docs) {
-  console.log(`[Profile] Found ${docs.length} profiles`);
+  docs.forEach(doc => {
+    if (!doc.imageUrl) {
+      doc.imageUrl = '/images/profiles/default.png';
+    }
+  });
 });
 
 export default mongoose.model('Profile', profileSchema);

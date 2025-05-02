@@ -23,6 +23,8 @@ export default mongoose;
 export async function connectDB() {
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(MONGODB_URI, connectionOptions);
+  } else {
+    console.log('✅ MongoDB ya está conectado');
   }
 }
 
@@ -31,3 +33,23 @@ export async function disconnectDB() {
     await mongoose.disconnect();
   }
 }
+
+// Manejo de eventos de la conexión
+db.on('error', (error) => {
+  console.error('❌ MongoDB connection error:', error);
+});
+
+db.on('connected', () => {
+  console.log('✅ MongoDB is connected');
+});
+
+db.on('disconnected', () => {
+  console.log('❌ MongoDB is disconnected');
+});
+
+// Cerrar la conexión cuando la aplicación termine
+process.on('SIGINT', async () => {
+  await disconnectDB();
+  console.log('🛑 MongoDB disconnected due to app termination');
+  process.exit(0);
+});

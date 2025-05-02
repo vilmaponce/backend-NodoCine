@@ -5,53 +5,82 @@ import authRoutes from './Routes/auth.mjs';
 import movieRoutes from './Routes/movies.mjs';
 import profileRoutes from './Routes/profiles.mjs';
 import cors from 'cors';
+import { upload } from './middlewares/upload.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
-// 1. Configuración INICIAL de paths (SIEMPRE primero)
+// Configuración de paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 2. Llamar a dotenv.config() para cargar las variables de entorno
 dotenv.config();
 
-// 2. Conexión a la base de datos
 connectDB().then(() => {
-
   const app = express();
 
-  // 3. Middlewares BÁSICOS
-  app.use(express.json()); // Para parsear JSON
+  // Middlewares básicos
+  app.use(express.json());
   app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true
   }));
+  app.use(express.urlencoded({ extended: true }));
 
-  // 4. Servir archivos estáticos (IMPORTANTE el path correcto)
 
-  // Servir archivos estáticos desde el directorio 'public'
-  app.use('/public', express.static(path.join(__dirname, 'public')));
-  // 👉 Agregá esta línea para servir la carpeta 'images'
-  app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
 
-  // 5. Rutas de la API
+// Configuración de rutas estáticas
+const publicDir = path.join(__dirname, 'public');
+const imagesDir = path.join(publicDir, 'images');
+
+// Servir archivos estáticos
+app.use(express.static(publicDir));  // Para servir /public
+
+// Middleware para manejar imágenes de perfiles faltantes
+app.use('/images/profiles/:imageName', (req, res, next) => {
+  const imagePath = path.join(imagesDir, 'profiles', req.params.imageName);
+  
+  fs.access(imagePath, (err) => {
+    if (err) {
+      console.log('⚠️ Imagen de perfil no encontrada, usando default');
+      return res.sendFile(path.join(imagesDir, 'profiles', 'default-profile.png'));
+    }
+    next();
+  });
+});
+
+app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
+
+
+  // Rutas API
   app.use('/api/auth', authRoutes);
   app.use('/api/movies', movieRoutes);
   app.use('/api/profiles', profileRoutes);
 
-  // 6. Manejo de errores (DEBE ir al final)
+  // Manejo de errores
   app.use((err, req, res, next) => {
     console.error('[ERROR]', err.message);
+
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'El archivo es demasiado grande (máximo 5MB)' });
+    }
+    if (err.message.includes('Solo se permiten imágenes')) {
+      return res.status(415).json({ error: err.message });
+    }
+
     res.status(500).json({ error: 'Error interno del servidor' });
   });
 
-  // 7. Iniciar servidor
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
     console.log(`\n✅ Servidor funcionando en: http://localhost:${PORT}`);
-    console.log(`✅ Ruta de imágenes: ${path.join(__dirname, 'public', 'images')}\n`);
+    console.log(`✅ Ruta de imágenes: http://localhost:${PORT}/images`);
+    console.log(`✅ Ruta de perfiles: http://localhost:${PORT}/images/profiles`);
+    console.log(`✅ Ruta de películas: http://localhost:${PORT}/images/movies`);
+    console.log(`✅ Ruta de autenticación: http://localhost:${PORT}/api/auth`);
   });
-}).catch(err => {
+})
+.catch(err => {
   console.error('❌ FALLA al conectar con MongoDB:', err.message);
   process.exit(1);
 });

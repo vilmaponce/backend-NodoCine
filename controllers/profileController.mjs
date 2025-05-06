@@ -58,135 +58,56 @@ const normalizeImageUrl = (url, req) => {
 };
 
 // Crear perfil - Versión corregida
+// controllers/profileController.mjs
 export const createProfile = async (req, res) => {
   try {
-    console.log('Body completo recibido:', req.body);
-    console.log('Archivo recibido:', req.file ? {
-      filename: req.file.filename,
-      path: req.file.path,
-      mimetype: req.file.mimetype,
-      size: req.file.size
-    } : 'No se recibió archivo');
+    console.log('Body recibido:', req.body);
+    console.log('Archivo recibido:', req.file || 'No se recibió archivo');
     
-    // Verificar que el cuerpo de la solicitud tenga los campos requeridos
-    if (!req.body.name) {
-      return res.status(400).json({
-        error: 'ValidationError',
-        message: 'El nombre del perfil es requerido'
-      });
-    }
-
-    // Determinar el ID de usuario correctamente
-    let userId;
+    // Validaciones...
     
-    // Determinar userId de múltiples posibles fuentes
-    if (req.user && (req.user.id || req.user._id)) {
-      userId = req.user.id || req.user._id;
-    } else if (req.body.userId) {
-      userId = req.body.userId;
-    } else {
-      return res.status(400).json({
-        error: 'ValidationError',
-        message: 'No se proporcionó ID de usuario'
-      });
+    // Asegurar que userId sea obtenido correctamente
+    const userId = req.user?.id || req.user?._id || req.body.userId;
+    
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: 'ID de usuario inválido' });
     }
     
-    console.log('ID de usuario determinado:', userId);
-
-    // Validar que el userId es un ObjectId válido
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({
-        error: 'ValidationError',
-        message: 'ID de usuario inválido'
-      });
-    }
-
-    // Preparar datos del perfil con el userId validado
+    // Crear objeto del perfil
     const profileData = {
       name: req.body.name,
-      isChild: req.body.isChild === 'true',
-      userId: userId, // Usar el ID validado
-      imageUrl: '/images/profile_default.png' // Ruta por defecto
+      isChild: req.body.isChild === true || req.body.isChild === 'true',
+      userId: userId,
+      // Usar ruta por defecto si no hay imagen
+      imageUrl: '/images/profiles/default-profile.png'
     };
     
-    console.log('Datos del perfil iniciales:', profileData);
-
-    // Manejar la imagen si fue enviada
+    // Procesar imagen si existe
     if (req.file) {
-      // Validar tipo de archivo en el backend (aunque multer ya debería haberlo filtrado)
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-      if (!allowedTypes.includes(req.file.mimetype)) {
-        try {
-          fs.unlinkSync(req.file.path); // Eliminar archivo no válido
-        } catch (err) {
-          console.error('Error al eliminar archivo no válido:', err);
-        }
-        
-        return res.status(400).json({
-          error: 'ValidationError',
-          message: 'Solo se permiten imágenes JPEG, PNG, GIF o WEBP'
-        });
-      }
-
-      // Simplemente establecer la ruta correcta (ya guardada en public/images/profiles)
       profileData.imageUrl = `/images/profiles/${req.file.filename}`;
-      console.log('Ruta de imagen asignada:', profileData.imageUrl);
-      
-      // Verificar si el archivo existe en el sistema
-      try {
-        const fullPath = path.join(__dirname, '../public', profileData.imageUrl);
-        const fileExists = fs.existsSync(fullPath);
-        console.log(`Verificación de archivo: ${fullPath} - Existe: ${fileExists}`);
-      } catch (err) {
-        console.error('Error al verificar archivo:', err);
-      }
-    } else {
-      console.log('No se recibió imagen, usando imagen por defecto');
     }
-
-    // Crear y guardar el perfil
+    
+    // Crear y guardar perfil
     const profile = new Profile(profileData);
     const savedProfile = await profile.save();
-    console.log('Perfil guardado en la base de datos:', savedProfile);
-
-    // Responder con los datos del perfil creado
+    
+    // Responder con datos normalizados
     res.status(201).json({
-      _id: savedProfile._id,
-      id: savedProfile._id, // Para consistencia
-      name: savedProfile.name,
-      isChild: savedProfile.isChild,
-      imageUrl: savedProfile.imageUrl,
-      userId: savedProfile.userId
-    });
-
-  } catch (error) {
-    console.error('Error completo al crear perfil:', error);
-
-    // Limpiar archivo subido si hubo error
-    if (req.file?.path) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (err) {
-        console.error('Error al eliminar archivo tras error:', err);
+      success: true,
+      profile: {
+        _id: savedProfile._id,
+        id: savedProfile._id.toString(),
+        name: savedProfile.name,
+        isChild: savedProfile.isChild,
+        imageUrl: normalizeImageUrl(savedProfile.imageUrl, req),
+        userId: savedProfile.userId
       }
-    }
-
-    // Manejar diferentes tipos de errores
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({
-        error: error.name,
-        message: error.message
-      });
-    }
-
-    res.status(500).json({
-      error: 'ServerError',
-      message: 'Error interno al crear perfil',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+    
+  } catch (error) {
+    // Manejo de errores...
   }
 };
-
 // Obtener todos los perfiles (admin)
 export const getAllProfiles = async (req, res) => {
   try {
@@ -315,17 +236,39 @@ export const deleteProfile = async (req, res) => {
 // Watchlist
 // En controllers/profileController.mjs
 
+// En controllers/profileController.mjs
+
+// Obtener watchlist
+export const getWatchlist = async (req, res) => {
+  const { id } = req.params; // ID del perfil
+  
+  try {
+    // Verificar que el perfil existe
+    const profile = await Profile.findById(id).populate('watchlist');
+    
+    if (!profile) {
+      return res.status(404).json({ message: 'Perfil no encontrado' });
+    }
+    
+    // Enviar la watchlist (si no existe, enviar un array vacío)
+    res.json(profile.watchlist || []);
+  } catch (error) {
+    console.error('Error al obtener watchlist:', error);
+    res.status(500).json({ 
+      message: 'Error del servidor',
+      error: error.message
+    });
+  }
+};
+
 // Añadir a watchlist
 export const addToWatchlist = async (req, res) => {
   const { id } = req.params; // ID del perfil
   const { movieId } = req.body; // ID de la película
   
   try {
-    // Verificar que el perfil pertenece al usuario
-    const profile = await Profile.findOne({
-      _id: id,
-      userId: req.user.userId
-    });
+    // Verificar que el perfil existe
+    const profile = await Profile.findById(id);
     
     if (!profile) {
       return res.status(404).json({ message: 'Perfil no encontrado' });
@@ -342,11 +285,7 @@ export const addToWatchlist = async (req, res) => {
     
     res.json({ 
       message: 'Película añadida a la watchlist',
-      profile: {
-        ...profile.toObject(),
-        // Normalizar imageUrl si es necesario
-        imageUrl: profile.imageUrl
-      }
+      profile
     });
   } catch (error) {
     console.error('Error al añadir a watchlist:', error);
@@ -357,42 +296,13 @@ export const addToWatchlist = async (req, res) => {
   }
 };
 
-// Obtener watchlist
-export const getWatchlist = async (req, res) => {
-  const { id } = req.params; // ID del perfil
-  
-  try {
-    // Verificar que el perfil pertenece al usuario
-    const profile = await Profile.findOne({
-      _id: id,
-      userId: req.user.userId
-    }).populate('watchlist');
-    
-    if (!profile) {
-      return res.status(404).json({ message: 'Perfil no encontrado' });
-    }
-    
-    // Enviar la watchlist
-    res.json(profile.watchlist || []);
-  } catch (error) {
-    console.error('Error al obtener watchlist:', error);
-    res.status(500).json({ 
-      message: 'Error del servidor',
-      error: error.message
-    });
-  }
-};
-
 // Eliminar de watchlist
 export const removeFromWatchlist = async (req, res) => {
-  const { id, movieId } = req.params; // ID del perfil y de la película
+  const { id, movieId } = req.params; // IDs del perfil y de la película
   
   try {
-    // Verificar que el perfil pertenece al usuario
-    const profile = await Profile.findOne({
-      _id: id,
-      userId: req.user.userId
-    });
+    // Verificar que el perfil existe
+    const profile = await Profile.findById(id);
     
     if (!profile) {
       return res.status(404).json({ message: 'Perfil no encontrado' });
@@ -400,17 +310,13 @@ export const removeFromWatchlist = async (req, res) => {
     
     // Eliminar de la watchlist
     profile.watchlist = profile.watchlist.filter(
-      movie => movie.toString() !== movieId
+      item => item.toString() !== movieId
     );
     await profile.save();
     
     res.json({ 
       message: 'Película eliminada de la watchlist',
-      profile: {
-        ...profile.toObject(),
-        // Normalizar imageUrl si es necesario
-        imageUrl: profile.imageUrl
-      }
+      profile
     });
   } catch (error) {
     console.error('Error al eliminar de watchlist:', error);

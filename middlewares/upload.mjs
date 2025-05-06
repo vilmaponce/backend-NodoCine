@@ -18,12 +18,27 @@ if (!fs.existsSync(uploadDir)) {
 // Configuración de almacenamiento
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);
+    // Determinar carpeta según tipo de archivo
+    let uploadPath;
+    if (file.fieldname === 'profileImage') {
+      uploadPath = path.join(__dirname, '../public/images/profiles');
+    } else if (file.fieldname === 'movieImage') {
+      uploadPath = path.join(__dirname, '../public/images/movies');
+    } else {
+      uploadPath = path.join(__dirname, '../public/images');
+    }
+    
+    // Asegurar que el directorio existe
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    
+    cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `profile-${uniqueSuffix}${ext}`);
+    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
   }
 });
 

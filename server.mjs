@@ -1,20 +1,39 @@
 // server.mjs
+import fs from 'fs';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './db.mjs';
-import path from 'path';
 import { fileURLToPath } from 'url';
 import authRoutes from './Routes/auth.mjs';
 import movieRoutes from './Routes/movies.mjs';
 import profileRoutes from './Routes/profiles.mjs';
 import userRoutes from './Routes/users.mjs';
-import fs from 'fs';
+
 
 
 // Configuración de paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Crear directorios necesarios
+const createDirs = () => {
+  const dirs = [
+    path.join(__dirname, 'public'),
+    path.join(__dirname, 'public/images'),
+    path.join(__dirname, 'public/images/profiles'),
+    path.join(__dirname, 'public/images/movies')
+  ];
+  
+  dirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`Directorio creado: ${dir}`);
+    }
+  });
+};
+
+createDirs();
 
 dotenv.config();
 
@@ -23,10 +42,14 @@ connectDB().then(() => {
 
   // Middlewares básicos
   app.use(express.json());
+
   app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
   }));
+
   app.use(express.urlencoded({ extended: true }));
 
 
@@ -45,7 +68,7 @@ connectDB().then(() => {
   // Manejo de errores
   app.use((err, req, res, next) => {
     console.error('[ERROR]', err.message);
-   
+
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(413).json({ error: 'El archivo es demasiado grande (máximo 5MB)' });
     }

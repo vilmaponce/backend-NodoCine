@@ -190,64 +190,69 @@ export const createMovie = async (req, res) => {
   }
 };
 
+// En controllers/moviesController.mjs
 export const updateMovie = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // 1. Debug mejorado
-    console.log('📥 Datos recibidos para actualizar:', {
+    // Debug mejorado para ver qué datos están llegando
+    console.log('📥 Datos recibidos para actualizar película:', {
       id,
-      ratingReceived: req.body.rating,  // Debug específico para rating
-      fullBody: req.body
+      body: req.body
     });
 
-    // 2. Normalización mejorada
+    // Asegurar que los datos están en el formato correcto
     const updateData = {
-      ...req.body,  // Primero esparce todos los datos recibidos
+      ...req.body,
+      // Convertir campos numéricos si es necesario
       year: req.body.year ? Number(req.body.year) : undefined,
-      rating: req.body.rating ? Number(req.body.rating) : undefined, // Conversión segura
+      rating: req.body.rating ? Number(req.body.rating) : undefined,
+      // Normalizar la URL de la imagen si existe
       imageUrl: req.body.imageUrl?.startsWith('http') 
         ? req.body.imageUrl 
-        : `/images/${req.body.imageUrl?.replace(/^\/?images\//, '')}`,
+        : req.body.imageUrl?.startsWith('/') 
+          ? req.body.imageUrl 
+          : `/images/${req.body.imageUrl}`,
+      // Añadir fecha de actualización
       updatedAt: new Date()
     };
 
-    // 3. Filtra valores undefined para evitar borrar campos
-    const filteredUpdate = Object.fromEntries(
-      Object.entries(updateData).filter(([_, v]) => v !== undefined)
-    );
+    console.log('🔄 Datos procesados para actualizar:', updateData);
 
-    console.log('🔄 Datos que se actualizarán:', filteredUpdate);
-
-    // 4. Actualización en MongoDB
+    // Actualizar la película en la base de datos
     const updatedMovie = await Movie.findByIdAndUpdate(
       id,
-      { $set: filteredUpdate },  // Usa $set para actualizar solo los campos enviados
+      { $set: updateData },  // Usar $set para actualizar solo los campos proporcionados
       { 
-        new: true,
-        runValidators: true,
-        lean: true
+        new: true,          // Devolver el documento actualizado
+        runValidators: true, // Ejecutar validadores de esquema
+        lean: true           // Devolver un objeto plano en lugar de un documento mongoose
       }
     );
 
+    // Verificar si se encontró y actualizó la película
     if (!updatedMovie) {
+      console.log('❌ Película no encontrada:', id);
       return res.status(404).json({ 
         success: false,
         error: 'Película no encontrada' 
       });
     }
 
-    console.log('✅ Rating actualizado a:', updatedMovie.rating);  // Debug específico
+    console.log('✅ Película actualizada correctamente:', updatedMovie);
 
+    // Devolver respuesta exitosa
     res.json({
       success: true,
       movie: updatedMovie
     });
 
   } catch (error) {
-    console.error('❌ Error crítico en updateMovie:', {
+    // Manejar errores detalladamente
+    console.error('❌ Error al actualizar película:', {
       message: error.message,
-      validationErrors: error.errors // Muestra errores de validación de Mongoose
+      stack: error.stack,
+      validationErrors: error.errors // Para errores de validación de Mongoose
     });
     
     res.status(500).json({

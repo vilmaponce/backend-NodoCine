@@ -29,6 +29,15 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+    set: function(role) {
+      this.isAdmin = role === 'admin';
+      return role;
+    }
+  },
   profiles: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Profile'
@@ -42,11 +51,14 @@ UserSchema.methods.comparePassword = async function(password) {
 
 // Hash de contraseña antes de guardar
 UserSchema.pre('save', async function(next) {
+  // Solo hashea la contraseña si ha sido modificada o es nueva
   if (!this.isModified('password')) return next();
   
   try {
     const salt = await bcryptjs.genSalt(10);
     this.password = await bcryptjs.hash(this.password, salt);
+    // Sincronizar role con isAdmin
+    this.role = this.isAdmin ? 'admin' : 'user';
     next();
   } catch (error) {
     next(error);

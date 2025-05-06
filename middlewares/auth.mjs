@@ -9,7 +9,16 @@ export const verifyToken = (req, res, next) => {
   if (!token) return res.status(401).json({ message: 'Acceso denegado. No hay token.' });
 
   try {
-    req.user = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Normalizar los datos del usuario
+    req.user = {
+      id: decoded.id || decoded.userId,
+      email: decoded.email,
+      // Normalizar isAdmin considerando ambos formatos
+      isAdmin: decoded.isAdmin || decoded.role === 'admin'
+    };
+    
     next();
   } catch (error) {
     res.status(401).json({ message: 'Token inválido o expirado' });
@@ -26,18 +35,23 @@ export const verifyAdmin = (req, res, next) => {
 };
 
 // 3. Middleware de roles dinámicos (opcional para futura escalabilidad)
-export const checkRole = (roles = []) => {
+// Modifica tu middleware checkRole en middlewares/auth.mjs
+export const checkRole = (role) => {
+  // Si se pasa un string, convertirlo en array
+  const roles = Array.isArray(role) ? role : [role];
+  
   return (req, res, next) => {
-    if (!req.user) return res.status(401).json({ message: 'Usuario no autenticado' });
+    if (!req.user) {
+      return res.status(401).json({ message: 'Usuario no autenticado' });
+    }
     
-    const hasRole = roles.some(role => 
-      req.user.role === role || (role === 'admin' && req.user.isAdmin)
-    );
+    // Verificar si el usuario tiene uno de los roles permitidos
+    const userRole = req.user.role || (req.user.isAdmin ? 'admin' : 'user');
     
-    if (!hasRole) {
+    if (roles.includes(userRole) || (roles.includes('admin') && req.user.isAdmin)) {
+      next();
+    } else {
       return res.status(403).json({ message: 'Permisos insuficientes' });
     }
-    next();
   };
 };
-

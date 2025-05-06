@@ -1,26 +1,56 @@
+// models/User.mjs
 import mongoose from 'mongoose';
-const { Schema } = mongoose;
+import bcryptjs from 'bcryptjs';
 
-
-// User.mjs
-const userSchema = new mongoose.Schema({
-  email: { 
-    type: String, 
+const UserSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
     unique: true,
-    required: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Email inválido']
+    min: 3,
+    max: 20
   },
-  password: { 
-    type: String, 
+  email: {
+    type: String,
     required: true,
-    minlength: 8
+    unique: true,
+    max: 50
   },
-  role: { 
-    type: String, 
-    enum: ['admin', 'standard'], 
-    default: 'standard',
-    required: true
-  }
+  password: {
+    type: String,
+    required: true,
+    min: 6
+  },
+  profilePic: {
+    type: String,
+    default: ""
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
+  profiles: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Profile'
+  }]
 }, { timestamps: true });
 
-export default mongoose.model('User', userSchema);
+// Método para comparar contraseñas
+UserSchema.methods.comparePassword = async function(password) {
+  return await bcryptjs.compare(password, this.password);
+};
+
+// Hash de contraseña antes de guardar
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  
+  try {
+    const salt = await bcryptjs.genSalt(10);
+    this.password = await bcryptjs.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+export default mongoose.model("User", UserSchema);

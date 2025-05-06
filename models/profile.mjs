@@ -10,11 +10,11 @@ const profileSchema = new mongoose.Schema({
   },
   imageUrl: {
     type: String,
-    default: '/images/profiles/default-profile.png', // Ruta relativa por defecto
+    default: '/images/default-profile.png', // Ruta relativa por defecto
     set: function(imageUrl) {
       // Si no se proporciona imagen o está vacía, usar la predeterminada
       return !imageUrl || imageUrl.trim() === '' ? 
-        '/images/profiles/default-profile.png' : 
+        '/images/default-profile.png' : 
         imageUrl;
     }
   },
@@ -44,7 +44,7 @@ const profileSchema = new mongoose.Schema({
 profileSchema.post('find', function(docs) {
   docs.forEach(doc => {
     if (!doc.imageUrl) {
-      doc.imageUrl = '/images/profiles/default.png';
+      doc.imageUrl = '/images/default.png';
     }
   });
 });

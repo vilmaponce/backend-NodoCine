@@ -1,14 +1,16 @@
+// server.mjs
 import express from 'express';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './db.mjs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import authRoutes from './Routes/auth.mjs';
 import movieRoutes from './Routes/movies.mjs';
 import profileRoutes from './Routes/profiles.mjs';
-import cors from 'cors';
-import { upload } from './middlewares/upload.mjs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import userRoutes from './Routes/users.mjs';
 import fs from 'fs';
+
 
 // Configuración de paths
 const __filename = fileURLToPath(import.meta.url);
@@ -28,39 +30,22 @@ connectDB().then(() => {
   app.use(express.urlencoded({ extended: true }));
 
 
+  // Configurar Express para servir archivos estáticos desde la carpeta public
+  app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuración de rutas estáticas
-const publicDir = path.join(__dirname, 'public');
-const imagesDir = path.join(publicDir, 'images');
-
-// Servir archivos estáticos
-app.use(express.static(publicDir));  // Para servir /public
-
-// Middleware para manejar imágenes de perfiles faltantes
-app.use('/images/profiles/:imageName', (req, res, next) => {
-  const imagePath = path.join(imagesDir, 'profiles', req.params.imageName);
-  
-  fs.access(imagePath, (err) => {
-    if (err) {
-      console.log('⚠️ Imagen de perfil no encontrada, usando default');
-      return res.sendFile(path.join(imagesDir, 'profiles', 'default-profile.png'));
-    }
-    next();
-  });
-});
-
-app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
-
+  // Configuración específica para asegurar que las imágenes se sirvan correctamente
+  app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
   // Rutas API
   app.use('/api/auth', authRoutes);
   app.use('/api/movies', movieRoutes);
   app.use('/api/profiles', profileRoutes);
+  app.use('/api/users', userRoutes);
 
   // Manejo de errores
   app.use((err, req, res, next) => {
     console.error('[ERROR]', err.message);
-
+   
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(413).json({ error: 'El archivo es demasiado grande (máximo 5MB)' });
     }
@@ -80,7 +65,7 @@ app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
     console.log(`✅ Ruta de autenticación: http://localhost:${PORT}/api/auth`);
   });
 })
-.catch(err => {
-  console.error('❌ FALLA al conectar con MongoDB:', err.message);
-  process.exit(1);
-});
+  .catch(err => {
+    console.error('❌ FALLA al conectar con MongoDB:', err.message);
+    process.exit(1);
+  });

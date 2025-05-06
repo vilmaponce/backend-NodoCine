@@ -1,6 +1,7 @@
 // models/Movie.mjs
 import mongoose from '../db.mjs';
 
+
 const movieSchema = new mongoose.Schema({
   title: {
     type: String,

@@ -9,37 +9,23 @@ import {
     removeFromWatchlist,
     getAllProfiles
 } from '../controllers/profileController.mjs';
-import { authenticate, checkRole } from '../middlewares/auth.mjs';
+import { verifyToken, verifyAdmin } from '../middlewares/auth.mjs'; // Cambiado verifyAdmin por verifyTokenAndAdmin
 import { upload } from '../middlewares/upload.mjs';
 
 const router = express.Router();
 
-// Admin-only routes
-router.get('/', authenticate, checkRole(['admin']), getAllProfiles);
-router.delete('/:id', authenticate, checkRole(['admin']), deleteProfile);
+// Rutas solo para admin
+router.get('/', verifyToken, verifyAdmin, getAllProfiles); // Cambiado verifyAdmin por verifyTokenAndAdmin
+router.delete('/:id', verifyToken, verifyAdmin, deleteProfile); // Cambiado verifyAdmin por verifyTokenAndAdmin
 
-router.put(
-    '/:id',
-    authenticate,                        // ✅ Verifica el token JWT
-    checkRole(['admin', 'user']),        // ✅ Permite acceso solo a ciertos roles
-    upload.single('image'),              // ✅ Procesa una imagen (clave: "image" en el form)
-    updateProfile                        // ✅ Controlador que actualiza el perfil
-);
+// Rutas para usuarios autenticados (sin verificación de rol)
+router.get('/user/:userId', verifyToken, getProfilesByUser);
+router.post('/', verifyToken, upload.single('image'), createProfile);
+router.put('/:id', verifyToken, upload.single('image'), updateProfile);
 
-
-// User profile management
-router.get('/user/:userId', authenticate, getProfilesByUser);
-router.post(
-    '/',
-    authenticate,
-    checkRole(['admin', 'user']), // Permitir creación a usuarios normales
-    upload.single('image'),
-    createProfile
-);
-
-// Watchlist routes
-router.post('/:id/watchlist', authenticate, addToWatchlist);
-router.get('/:id/watchlist', authenticate, getWatchlist);
-router.delete('/:id/watchlist/:movieId', authenticate, removeFromWatchlist);
+// Rutas de watchlist (también solo autenticación)
+router.post('/:id/watchlist', verifyToken, addToWatchlist);
+router.get('/:id/watchlist', verifyToken, getWatchlist);
+router.delete('/:id/watchlist/:movieId', verifyToken, removeFromWatchlist);
 
 export default router;

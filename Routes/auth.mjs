@@ -93,4 +93,57 @@ router.post('/make-admin', async (req, res) => {
   }
 });
 
+// Añade esto en Routes/auth.mjs justo después de la ruta de login
+// Ruta para registro
+router.post('/register', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    console.log('Datos recibidos en registro:', { email });
+
+    // Verificar si el usuario ya existe
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'El usuario ya existe' });
+    }
+    
+    // Crear el nuevo usuario
+    const newUser = new User({
+      username: email.split('@')[0], // Usar la parte del email antes de @ como username
+      email,
+      password, // Usar password sin hashear para pruebas
+      isAdmin: email.includes('admin'), // Hacer admin si el email contiene "admin"
+      role: email.includes('admin') ? 'admin' : 'user'
+    });
+
+    const savedUser = await newUser.save();
+    
+    // Crear token JWT
+    const token = jwt.sign(
+      {
+        id: savedUser._id,
+        email: savedUser.email,
+        isAdmin: savedUser.isAdmin,
+        role: savedUser.isAdmin ? 'admin' : 'user'
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      token,
+      user: {
+        id: savedUser._id,
+        email: savedUser.email,
+        isAdmin: savedUser.isAdmin,
+        role: savedUser.isAdmin ? 'admin' : 'user'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error en registro:', error);
+    res.status(500).json({ message: 'Error en el servidor' });
+  }
+});
+
 export default router;

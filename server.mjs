@@ -78,16 +78,20 @@ connectDB().then(() => {
 
     res.status(500).json({ error: 'Error interno del servidor' });
   });
-
   const PORT = process.env.PORT || 3001;
+  const HOST = process.env.NODE_ENV === 'production' ? 
+    process.env.API_BASE_URL : 
+    `http://localhost:${PORT}`;
+  
   app.listen(PORT, () => {
-    console.log(`\n✅ Servidor funcionando en: http://localhost:${PORT}`);
-    console.log(`✅ Ruta de imágenes: http://localhost:${PORT}/images`);
-    console.log(`✅ Ruta de perfiles: http://localhost:${PORT}/images/profiles`);
-    console.log(`✅ Ruta de películas: http://localhost:${PORT}/images/movies`);
-    console.log(`✅ Ruta de autenticación: http://localhost:${PORT}/api/auth`);
+    console.log(`\n✅ Servidor funcionando en: ${HOST}`);
+    console.log(`✅ Ruta de imágenes: ${HOST}/images`);
+    console.log(`✅ Ruta de perfiles: ${HOST}/images/profiles`);
+    console.log(`✅ Ruta de películas: ${HOST}/images/movies`);
+    console.log(`✅ Ruta de autenticación: ${HOST}/api/auth`);
+    console.log(`✅ Modo: ${process.env.NODE_ENV || 'development'}`);
   });
-})
+  })
   .catch(err => {
     console.error('❌ FALLA al conectar con MongoDB:', err.message);
     process.exit(1);

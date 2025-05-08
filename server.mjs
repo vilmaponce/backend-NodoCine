@@ -53,6 +53,10 @@ connectDB().then(() => {
   // Configurar Express para servir archivos estáticos desde la carpeta public
   app.use(express.static(path.join(__dirname, 'public')));
 
+
+  app.get('/', (req, res) => {
+    res.json({ message: 'NodoCine API is running!' });
+  });
   // Configuración específica para asegurar que las imágenes se sirvan correctamente
   app.use('/images', express.static(path.join(__dirname, 'public/images')));
 
@@ -76,16 +80,12 @@ connectDB().then(() => {
     res.status(500).json({ error: 'Error interno del servidor' });
   });
   const PORT = process.env.PORT || 3001;
-  const HOST = process.env.NODE_ENV === 'production' ? 
-    process.env.API_BASE_URL : 
-    `http://localhost:${PORT}`;
-  
   app.listen(PORT, () => {
-    console.log(`\n✅ Servidor funcionando en: ${HOST}`);
-    console.log(`✅ Ruta de imágenes: ${HOST}/images`);
-    console.log(`✅ Ruta de perfiles: ${HOST}/images/profiles`);
-    console.log(`✅ Ruta de películas: ${HOST}/images/movies`);
-    console.log(`✅ Ruta de autenticación: ${HOST}/api/auth`);
+    console.log(`\n✅ Servidor funcionando en puerto: ${PORT}`);
+    console.log(`✅ Ruta de imágenes: /images`);
+    console.log(`✅ Ruta de perfiles: /images/profiles`);
+    console.log(`✅ Ruta de películas: /images/movies`);
+    console.log(`✅ Ruta de autenticación: /api/auth`);
     console.log(`✅ Modo: ${process.env.NODE_ENV || 'development'}`);
   });
   })

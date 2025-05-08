@@ -11,7 +11,8 @@ Este proyecto implementa el backend para NodoCine, una plataforma de streaming i
 
 - **Administrador**:
   - Email: admin@admin.com
-  - Contraseña: password123
+  - Contraseña: admin123
+  - **Usuario**: FAMILIA - VER EN READMEN FRONTEND
 
 ## 🚀 Características
 
@@ -58,7 +59,7 @@ Este proyecto implementa el backend para NodoCine, una plataforma de streaming i
 
 1. **Clona el repositorio:**
    ```bash
-   git clone https://github.com/tu-usuario/nodo-cine-backend.git
+   git clone https://github.com/
    cd nodo-cine-backend
    ```
 
@@ -153,7 +154,7 @@ Este proyecto implementa el backend para NodoCine, una plataforma de streaming i
 
 ## 👥 Autor
 
-- **Tu Nombre** - [GitHub](https://github.com/vilmaponce)
+- **VILMA PONCE** - [GitHub](https://github.com/vilmaponce)
 
 ## 📄 Licencia
 

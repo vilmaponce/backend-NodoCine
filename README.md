@@ -2,6 +2,17 @@
 
 Este proyecto implementa el backend para NodoCine, una plataforma de streaming inspirada en Netflix que permite gestionar usuarios, perfiles y películas.
 
+## 🌐 Despliegue
+
+- **API URL**: [https://nodocine-backend.onrender.com/](https://nodocine-backend.onrender.com/)
+- **Frontend**: [https://frontend-nodo-cine-odwj.vercel.app/](https://frontend-nodo-cine-odwj.vercel.app/)
+
+## 🧪 Credenciales de prueba
+
+- **Administrador**:
+  - Email: admin@admin.com
+  - Contraseña: password123
+
 ## 🚀 Características
 
 - **Autenticación y Autorización**

@@ -1,4 +1,4 @@
-import Profile from '../models/Profile.mjs';
+import Profile from '../models/profile.mjs';
 import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';

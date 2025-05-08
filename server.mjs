@@ -43,12 +43,29 @@ connectDB().then(() => {
   // Middlewares básicos
   app.use(express.json());
 
-  app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  }));
+  // Configuración de CORS más flexible para despliegue
+const allowedOrigins = [
+  'http://localhost:5173',                   // Para desarrollo local
+  'https://tu-app-frontend.netlify.app',     // Reemplaza con tu URL de Netlify (aún no la tenemos)
+  process.env.FRONTEND_URL                   // Desde variable de entorno
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Permitir solicitudes sin origin (como aplicaciones móviles o curl)
+    if (!origin) return callback(null, true);
+    
+    // Verificar si el origin está en la lista de permitidos
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
   app.use(express.urlencoded({ extended: true }));
 
